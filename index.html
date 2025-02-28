@@ -1,27 +1,34 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>xcxworld - Private server created by: .gg/fkaTf9dW8t</title>
+   
+   <!-- Favicon -->
    <link rel="icon" type="image/webp" href="logo.png" />
-   <head>
-      <title>xcxworld - Private server created by: .gg/fkaTf9dW8t </title>
-      <style>
-         body {
-            margin: 0px;
-         }
-      </style>
 
-      <!-- Add Firebase SDK -->
-      <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js"></script>
-      <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore.js"></script>
-   </head>
-   <body>
-      <object width="100%" height="100%" id="content" type="application/x-shockwave-flash"
-         data="/1.0/main.swf" tabindex="0"
-         style="visibility: visible; display: block;">
-         <param name="allowScriptAccess" value="always">
-         <param name="allowFullScreen" value="true">
-         <param name="wmode" value="opaque">
-      </object>
+   <!-- Styling -->
+   <style>
+      body {
+         margin: 0px;
+      }
+   </style>
 
-      <!-- Link to your Firebase app.js -->
-      <script src="Service/app.js"></script>  <!-- Add this -->
-   </body>
+   <!-- Include Firebase scripts via CDN -->
+   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+
+   <!-- Include your own JavaScript file from the Service folder (with module type) -->
+   <script src="Service/app.js" type="module"></script>
+</head>
+<body>
+   <object width="100%" height="100%" id="content" type="application/x-shockwave-flash"
+      data="/1.0/main.swf" tabindex="0"
+      style="visibility: visible; display: block;">
+      <param name="allowScriptAccess" value="always">
+      <param name="allowFullScreen" value="true">
+      <param name="wmode" value="opaque">
+   </object>
+</body>
 </html>
