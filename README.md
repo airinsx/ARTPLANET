@@ -1,2 +1,4 @@
 # ARTPLANET
-testing testing :3
+
+
+Game created for me and my friendsu >o<
