@@ -1,8 +1,8 @@
-// Import Firebase modules using the correct syntax for modules
+// Import Firebase modules
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-// Your Firebase configuration (copy-paste from your Firebase Console)
+// Your Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDcivk9-MzfaDgIqqJg21AxQ2EMkDxbDqk",
   authDomain: "xcxworld-bfa04.firebaseapp.com",
@@ -15,8 +15,13 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+console.log("Firebase app initialized:", app);
 
 // Get Firestore instance
 const db = getFirestore(app);
 
-// You can now use the db instance to access Firestore
+// Check if Firestore is working
+console.log("Firestore instance:", db);
+
+// You can now interact with Firestore, for example:
+console.log("Now you can interact with your Firestore database.");
