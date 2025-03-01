@@ -89,30 +89,29 @@ function loadCustomizationOptions(res) {
 
 
 const xml2js = require("xml2js");
-async function parseXML2(xmlString) {
-  return new Promise((resolve, reject) => {
-    xml2js.parseString(xmlString, { explicitArray: false, ignoreAttrs: true }, (err, result) => {
-      if (err) reject(err);
-      else resolve(result);
-    });
-  });
-}
-
 
 async function checkUsernameAvailability(requestBody, res) {
   try {
-    // Convert XML to JSON while handling namespaces
-    const parsedBody = await parseXML2(requestBody);
+    // Parse the XML request body
+    const parsedBody = await parseXML(requestBody);
 
     console.log("Parsed XML Request Body:", JSON.stringify(parsedBody, null, 2));
 
-    // Extract actorName correctly from the parsed XML
+    // Extract actorName correctly
+    const body = parsedBody["SOAP-ENV:Envelope"]?.["SOAP-ENV:Body"];
+    if (!body) {
+      console.error("Invalid SOAP request structure.");
+      return res.status(400).send("Invalid SOAP request structure");
+    }
+
+    // Extract IsActorNameUsed element, regardless of namespace prefix
+    const isActorNameUsedKey = Object.keys(body).find((key) => key.includes("IsActorNameUsed"));
     const actorName =
-      parsedBody["SOAP-ENV:Envelope"]?.["SOAP-ENV:Body"]?.["tns:IsActorNameUsed"]?.["tns:actorName"];
+      body[isActorNameUsedKey]?.["tns:actorName"] || body[isActorNameUsedKey]?.["actorName"];
 
     if (!actorName) {
-      console.error("Invalid XML structure, missing actorName.");
-      return res.status(400).send("Invalid XML request structure");
+      console.error("Missing actorName in request.");
+      return res.status(400).send("Invalid SOAP request structure: Missing actorName");
     }
 
     console.log(`Checking username availability for: ${actorName}`);
@@ -121,23 +120,24 @@ async function checkUsernameAvailability(requestBody, res) {
     const usersRef = db.collection("users");
     const snapshot = await usersRef.where("Name", "==", actorName).get();
 
-    // Prepare SOAP response
-    const response = {
-      "soap:Envelope": {
-        "$": { "xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/" },
-        "soap:Body": {
-          "IsActorNameUsedResponse": {
-            "$": { "xmlns": "http://moviestarplanet.com/" },
-            "IsActorNameUsedResult": snapshot.empty ? "false" : "true"
-          }
-        }
-      }
-    };
+    // Check if the username exists
+    const isUsed = !snapshot.empty ? "true" : "false";
+
+    // Build SOAP response
+    const response = `
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+        <soap:Body>
+          <IsActorNameUsedResponse xmlns="http://moviestarplanet.com/">
+            <IsActorNameUsedResult>${isUsed}</IsActorNameUsedResult>
+          </IsActorNameUsedResponse>
+        </soap:Body>
+      </soap:Envelope>
+    `.trim();
 
     // Send response as XML
     res.set("Content-Type", "text/xml");
-    res.send(buildXML(response));
-
+    res.send(response);
   } catch (error) {
     console.error("Error in checkUsernameAvailability:", error);
     res.status(500).send("Internal Server Error");
