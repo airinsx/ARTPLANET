@@ -89,11 +89,10 @@ function loadCustomizationOptions(res) {
 
 // Check if a username is already taken
 async function checkUsernameAvailability(requestBody, res) {
-  ) {
-  //const actorName = requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"][0]["actorName"][0];
+  const actorName = requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"][0]["actorName"][0];
 
- // const usersRef = db.collection("users");
-  //const snapshot = await usersRef.where("Name", "==", actorName).get();
+  const usersRef = db.collection("users");
+  const snapshot = await usersRef.where("Name", "==", actorName).get();
 
   const response = {
     "soap:Envelope": {
