@@ -17,7 +17,7 @@ router.post("/Service", async (req, res) => {
         return loadCustomizationOptions(res);
 
       case "http://moviestarplanet.com/IsActorNameUsed":
-        return checkUsernameAvailability(requestBody, res);
+        return IsActorNameUsed(requestBody, res);
 
       case "http://moviestarplanet.com/CreateNewUser":
         return createNewUser(requestBody, res);
