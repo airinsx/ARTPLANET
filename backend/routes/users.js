@@ -90,7 +90,7 @@ function loadCustomizationOptions(res) {
 
 const xml2js = require("xml2js");
 
-async function checkUsernameAvailability(requestBody, res) {
+async function IsActorNameUsed(requestBody, res) {
   try {
     // Parse the XML request body
     const parsedBody = await parseXML(requestBody);
