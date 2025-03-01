@@ -89,23 +89,35 @@ function loadCustomizationOptions(res) {
 
 // Check if a username is already taken
 async function checkUsernameAvailability(requestBody, res) {
-  // Add checks to ensure the required fields exist before accessing them
-  if (!requestBody["soap:Envelope"] || !requestBody["soap:Envelope"]["soap:Body"] || !requestBody["soap:Envelope"]["soap:Body"][0] || !requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"] || !requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"][0]["actorName"]) {
+  // Log the parsed request body to debug the structure
+  console.log(JSON.stringify(requestBody, null, 2));
+
+  // Check if the required structure exists in the requestBody
+  if (
+    !requestBody["soap:Envelope"] ||
+    !requestBody["soap:Envelope"]["soap:Body"] ||
+    !requestBody["soap:Envelope"]["soap:Body"][0] ||
+    !requestBody["soap:Envelope"]["soap:Body"][0]["tns:IsActorNameUsed"] ||
+    !requestBody["soap:Envelope"]["soap:Body"][0]["tns:IsActorNameUsed"][0]["tns:actorName"]
+  ) {
     return res.status(400).send("Invalid SOAP request structure");
   }
 
-  const actorName = requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"][0]["actorName"][0];
+  // Extract the actor name from the request
+  const actorName = requestBody["soap:Envelope"]["soap:Body"][0]["tns:IsActorNameUsed"][0]["tns:actorName"][0];
 
+  // Query the database to check if the actor name is taken
   const usersRef = db.collection("users");
   const snapshot = await usersRef.where("Name", "==", actorName).get();
 
+  // Build the response XML
   const response = {
     "soap:Envelope": {
       "$": { "xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/" },
       "soap:Body": {
-        "IsActorNameUsedResponse": {
-          "$": { "xmlns": "http://moviestarplanet.com/" },
-          "IsActorNameUsedResult": snapshot.empty ? "false" : "true"
+        "tns:IsActorNameUsedResponse": {
+          "$": { "xmlns:tns": "http://moviestarplanet.com/" },
+          "tns:IsActorNameUsedResult": snapshot.empty ? "false" : "true"
         }
       }
     }
@@ -114,6 +126,7 @@ async function checkUsernameAvailability(requestBody, res) {
   res.set("Content-Type", "text/xml");
   res.send(buildXML(response));
 }
+
 
 // Create a new user
 async function createNewUser(requestBody, res) {
