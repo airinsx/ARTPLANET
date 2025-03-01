@@ -8,16 +8,16 @@ app.use(bodyParser.text({ type: "text/xml" }));
 
 // Serve crossdomain.xml
 app.get("/crossdomain.xml", (req, res) => {
-  const crossdomainXML = `<?xml version="1.0"?>
-  <!DOCTYPE cross-domain-policy SYSTEM "http://www.macromedia.com/xml/dtds/cross-domain-policy.dtd">
-  <cross-domain-policy>
-    <allow-access-from domain="*" secure="false"/>
-    <site-control permitted-cross-domain-policies="all"/>
-  </cross-domain-policy>`;
-
-  res.set("Content-Type", "text/xml");
-  res.send(crossdomainXML);
-});
+    const crossdomainXML = `<?xml version="1.0"?>
+    <!DOCTYPE cross-domain-policy SYSTEM "http://www.macromedia.com/xml/dtds/cross-domain-policy.dtd">
+    <cross-domain-policy>
+      <allow-access-from domain="*" secure="false"/>
+      <site-control permitted-cross-domain-policies="all"/>
+    </cross-domain-policy>`;
+  
+    res.set("Content-Type", "text/xml");
+    res.send(crossdomainXML);
+  });  
 
 // Handle all SOAP requests
 app.post("/Service", usersRoutes);
