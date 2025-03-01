@@ -87,29 +87,53 @@ function loadCustomizationOptions(res) {
   res.send(buildXML(response));
 }
 
-// Check if a username is already taken
+const xml2js = require("xml2js");
+
 async function checkUsernameAvailability(requestBody, res) {
-  const actorName = requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"][0]["actorName"][0];
+  try {
+    // Convert XML to JSON while handling namespaces
+    const parsedBody = await parseXML(requestBody);
 
-  const usersRef = db.collection("users");
-  const snapshot = await usersRef.where("Name", "==", actorName).get();
+    console.log("Parsed XML Request Body:", JSON.stringify(parsedBody, null, 2));
 
-  const response = {
-    "soap:Envelope": {
-      "$": { "xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/" },
-      "soap:Body": {
-        "IsActorNameUsedResponse": {
-          "$": { "xmlns": "http://moviestarplanet.com/" },
-          //"IsActorNameUsedResult": snapshot.empty ? "false" : "true"
-          "IsActorNameUsedResult": "false"
+    // Extract actorName correctly from the parsed XML
+    const actorName =
+      parsedBody["SOAP-ENV:Envelope"]?.["SOAP-ENV:Body"]?.["tns:IsActorNameUsed"]?.["tns:actorName"];
+
+    if (!actorName) {
+      console.error("Invalid XML structure, missing actorName.");
+      return res.status(400).send("Invalid XML request structure");
+    }
+
+    console.log(`Checking username availability for: ${actorName}`);
+
+    // Query Firebase database
+    const usersRef = db.collection("users");
+    const snapshot = await usersRef.where("Name", "==", actorName).get();
+
+    // Prepare SOAP response
+    const response = {
+      "soap:Envelope": {
+        "$": { "xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/" },
+        "soap:Body": {
+          "IsActorNameUsedResponse": {
+            "$": { "xmlns": "http://moviestarplanet.com/" },
+            "IsActorNameUsedResult": snapshot.empty ? "false" : "true"
+          }
         }
       }
-    }
-  };
+    };
 
-  res.set("Content-Type", "text/xml");
-  res.send(buildXML(response));
+    // Send response as XML
+    res.set("Content-Type", "text/xml");
+    res.send(buildXML(response));
+
+  } catch (error) {
+    console.error("Error in checkUsernameAvailability:", error);
+    res.status(500).send("Internal Server Error");
+  }
 }
+
 
 // Create a new user
 async function createNewUser(requestBody, res) {
