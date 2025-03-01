@@ -89,6 +89,11 @@ function loadCustomizationOptions(res) {
 
 // Check if a username is already taken
 async function checkUsernameAvailability(requestBody, res) {
+  // Add checks to ensure the required fields exist before accessing them
+  if (!requestBody["soap:Envelope"] || !requestBody["soap:Envelope"]["soap:Body"] || !requestBody["soap:Envelope"]["soap:Body"][0] || !requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"] || !requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"][0]["actorName"]) {
+    return res.status(400).send("Invalid SOAP request structure");
+  }
+
   const actorName = requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"][0]["actorName"][0];
 
   const usersRef = db.collection("users");
