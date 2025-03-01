@@ -17,7 +17,7 @@ router.post("/Service", async (req, res) => {
         return loadCustomizationOptions(res);
 
       case "http://moviestarplanet.com/IsActorNameUsed":
-        return IsActorNameUsed(requestBody, res);
+        return checkUsernameAvailability(requestBody, res);
 
       case "http://moviestarplanet.com/CreateNewUser":
         return createNewUser(requestBody, res);
@@ -87,63 +87,29 @@ function loadCustomizationOptions(res) {
   res.send(buildXML(response));
 }
 
+// Check if a username is already taken
+async function checkUsernameAvailability(requestBody, res) {
+  //const actorName = requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"][0]["actorName"][0];
 
-const xml2js = require("xml2js");
+  //const usersRef = db.collection("users");
+  //const snapshot = await usersRef.where("Name", "==", actorName).get();
 
-async function IsActorNameUsed(requestBody, res) {
-  try {
-    // Parse the XML request body
-    const parsedBody = await parseXML(requestBody);
-
-    console.log("Parsed XML Request Body:", JSON.stringify(parsedBody, null, 2));
-
-    // Extract actorName correctly
-    const body = parsedBody["SOAP-ENV:Envelope"]?.["SOAP-ENV:Body"];
-    if (!body) {
-      console.error("Invalid SOAP request structure.");
-      return res.status(400).send("Invalid SOAP request structure");
+  const response = {
+    "soap:Envelope": {
+      "$": { "xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/" },
+      "soap:Body": {
+        "IsActorNameUsedResponse": {
+          "$": { "xmlns": "http://moviestarplanet.com/" },
+          //"IsActorNameUsedResult": snapshot.empty ? "false" : "true"
+          "IsActorNameUsedResult": "false"
+        }
+      }
     }
+  };
 
-    // Extract IsActorNameUsed element, regardless of namespace prefix
-    const isActorNameUsedKey = Object.keys(body).find((key) => key.includes("IsActorNameUsed"));
-    const actorName =
-      body[isActorNameUsedKey]?.["tns:actorName"] || body[isActorNameUsedKey]?.["actorName"];
-
-    if (!actorName) {
-      console.error("Missing actorName in request.");
-      return res.status(400).send("Invalid SOAP request structure: Missing actorName");
-    }
-
-    console.log(`Checking username availability for: ${actorName}`);
-
-    // Query Firebase database
-    const usersRef = db.collection("users");
-    const snapshot = await usersRef.where("Name", "==", actorName).get();
-
-    // Check if the username exists
-    const isUsed = !snapshot.empty ? "true" : "false";
-
-    // Build SOAP response
-    const response = `
-      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-      <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-        <soap:Body>
-          <IsActorNameUsedResponse xmlns="http://moviestarplanet.com/">
-            <IsActorNameUsedResult>${isUsed}</IsActorNameUsedResult>
-          </IsActorNameUsedResponse>
-        </soap:Body>
-      </soap:Envelope>
-    `.trim();
-
-    // Send response as XML
-    res.set("Content-Type", "text/xml");
-    res.send(response);
-  } catch (error) {
-    console.error("Error in checkUsernameAvailability:", error);
-    res.status(500).send("Internal Server Error");
-  }
+  res.set("Content-Type", "text/xml");
+  res.send(buildXML(response));
 }
-
 
 // Create a new user
 async function createNewUser(requestBody, res) {
