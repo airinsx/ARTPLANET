@@ -123,17 +123,31 @@ function loadCustomizationOptions(res) {
 // Check if a username is already taken
 async function checkUsernameAvailability(requestBody, res) {
   try {
+    console.log("Received SOAP Request Body:", JSON.stringify(requestBody, null, 2));
+
     if (
       !requestBody ||
-      !requestBody["soap:Envelope"] ||
-      !requestBody["soap:Envelope"]["soap:Body"] ||
-      !requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"] ||
-      !requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"][0]["actorName"]
+      !requestBody["SOAP-ENV:Envelope"] ||
+      !requestBody["SOAP-ENV:Envelope"]["SOAP-ENV:Body"]
     ) {
-      return res.status(400).send("Invalid SOAP Request");
+      return res.status(400).send("Invalid SOAP Request - Missing Envelope or Body");
     }
 
-    const actorName = requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"][0]["actorName"][0];
+    const body = requestBody["SOAP-ENV:Envelope"]["SOAP-ENV:Body"][0];
+
+    // Try different namespace formats
+    let actorName;
+    if (body["tns:IsActorNameUsed"]) {
+      actorName = body["tns:IsActorNameUsed"][0]["tns:actorName"][0];
+    } else if (body["IsActorNameUsed"]) {
+      actorName = body["IsActorNameUsed"][0]["actorName"][0];
+    }
+
+    if (!actorName) {
+      return res.status(400).send("Invalid SOAP Request - Missing actorName");
+    }
+
+    console.log(`Checking availability for username: ${actorName}`);
 
     const usersRef = db.collection("users");
     const snapshot = await usersRef.where("Name", "==", actorName).get();
@@ -144,10 +158,10 @@ async function checkUsernameAvailability(requestBody, res) {
         "soap:Body": {
           "IsActorNameUsedResponse": {
             "$": { "xmlns": "http://moviestarplanet.com/" },
-            "IsActorNameUsedResult": snapshot.empty ? "false" : "true"
-          }
-        }
-      }
+            "IsActorNameUsedResult": snapshot.empty ? "false" : "true",
+          },
+        },
+      },
     };
 
     res.set("Content-Type", "text/xml");
@@ -157,6 +171,7 @@ async function checkUsernameAvailability(requestBody, res) {
     res.status(500).send("Internal Server Error");
   }
 }
+
 
 
 // Create a new user
