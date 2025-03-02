@@ -1,13 +1,15 @@
 const admin = require("firebase-admin");
-const { getFirestore } = require("firebase-admin/firestore");
 const path = require("path");
 
-// Load service account JSON
+// Load service account JSON file from the current directory
 const serviceAccount = require(path.join(__dirname, "serviceAccount.json"));
 
+// Initialize Firebase Admin SDK
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
-const db = getFirestore();
+// Firestore reference
+const db = admin.firestore();
+
 module.exports = db;
