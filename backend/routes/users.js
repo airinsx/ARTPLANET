@@ -28,6 +28,18 @@ router.post("/Service", async (req, res) => {
       case "http://moviestarplanet.com/GetLatestServerException":
         return getLatestServerException(res);
 
+      case "http://moviestarplanet.com/SaveEntitySnapshot":
+        return saveEntitySnapshot(requestBody, res);
+
+      case "http://moviestarplanet.com/getNowAsString":
+        return getNowAsString(res);
+
+      case "http://moviestarplanet.com/GetAppSetting":
+        return getAppSetting(requestBody, res);
+
+      case "http://moviestarplanet.com/LoadActorWithCurrentClothesBasicDataOnly":
+        return loadActorWithCurrentClothes(requestBody, res);
+
       default:
         res.status(400).send("Unknown SOAP Action");
     }
@@ -110,27 +122,42 @@ function loadCustomizationOptions(res) {
 
 // Check if a username is already taken
 async function checkUsernameAvailability(requestBody, res) {
-  const actorName = requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"][0]["actorName"][0];
+  try {
+    if (
+      !requestBody ||
+      !requestBody["soap:Envelope"] ||
+      !requestBody["soap:Envelope"]["soap:Body"] ||
+      !requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"] ||
+      !requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"][0]["actorName"]
+    ) {
+      return res.status(400).send("Invalid SOAP Request");
+    }
 
-  const usersRef = db.collection("users");
-  const snapshot = await usersRef.where("Name", "==", actorName).get();
+    const actorName = requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"][0]["actorName"][0];
 
-  const response = {
-    "soap:Envelope": {
-      "$": { "xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/" },
-      "soap:Body": {
-        "IsActorNameUsedResponse": {
-          "$": { "xmlns": "http://moviestarplanet.com/" },
-          "IsActorNameUsedResult": snapshot.empty ? "false" : "true"
-          //"IsActorNameUsedResult": "false"
+    const usersRef = db.collection("users");
+    const snapshot = await usersRef.where("Name", "==", actorName).get();
+
+    const response = {
+      "soap:Envelope": {
+        "$": { "xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/" },
+        "soap:Body": {
+          "IsActorNameUsedResponse": {
+            "$": { "xmlns": "http://moviestarplanet.com/" },
+            "IsActorNameUsedResult": snapshot.empty ? "false" : "true"
+          }
         }
       }
-    }
-  };
+    };
 
-  res.set("Content-Type", "text/xml");
-  res.send(buildXML(response));
+    res.set("Content-Type", "text/xml");
+    res.send(buildXML(response));
+  } catch (error) {
+    console.error("Error in IsActorNameUsed:", error);
+    res.status(500).send("Internal Server Error");
+  }
 }
+
 
 // Create a new user
 async function createNewUser(requestBody, res) {
@@ -200,6 +227,111 @@ async function loadActorDetails(requestBody, res) {
 
   res.set("Content-Type", "text/xml");
   res.send(buildXML(response));
+}
+
+// SaveEntitySnapshot (Saves player state)
+async function saveEntitySnapshot(requestBody, res) {
+  try {
+    const data = requestBody["soap:Envelope"]["soap:Body"][0]["SaveEntitySnapshot"][0];
+    const entityId = data["entityId"][0];
+    const entityType = data["EntityType"][0];
+    const snapshotData = data["data"][0]; // Base64-encoded snapshot
+
+    await db.collection("snapshots").doc(entityId).set({
+      entityType,
+      snapshotData,
+      timestamp: new Date().toISOString(),
+    });
+
+    const response = {
+      "soap:Envelope": {
+        "$": { "xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/" },
+        "soap:Body": {
+          "SaveEntitySnapshotResponse": {
+            "$": { "xmlns": "http://moviestarplanet.com/" },
+            "SaveEntitySnapshotResult": {},
+          },
+        },
+      },
+    };
+
+    res.set("Content-Type", "text/xml");
+    res.send(buildXML(response));
+  } catch (error) {
+    console.error("Error in SaveEntitySnapshot:", error);
+    res.status(500).send("Internal Server Error");
+  }
+}
+
+// getNowAsString (Returns current server time)
+function getNowAsString(res) {
+  const response = {
+    "soap:Envelope": {
+      "$": { "xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/" },
+      "soap:Body": {
+        "getNowAsStringResponse": {
+          "$": { "xmlns": "http://moviestarplanet.com/" },
+          "getNowAsStringResult": new Date().toISOString().replace("T", " ").split(".")[0] + "Z",
+        },
+      },
+    },
+  };
+
+  res.set("Content-Type", "text/xml");
+  res.send(buildXML(response));
+}
+
+// GetAppSetting (Returns a setting like FMSAppName)
+function getAppSetting(requestBody, res) {
+  const key = requestBody["soap:Envelope"]["soap:Body"][0]["GetAppSetting"][0]["key"][0];
+
+  const settings = {
+    FMSAppName: "196.251.89.98/xcxworld", // Example setting
+  };
+
+  const response = {
+    "soap:Envelope": {
+      "$": { "xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/" },
+      "soap:Body": {
+        "GetAppSettingResponse": {
+          "$": { "xmlns": "http://moviestarplanet.com/" },
+          "GetAppSettingResult": settings[key] || "",
+        },
+      },
+    },
+  };
+
+  res.set("Content-Type", "text/xml");
+  res.send(buildXML(response));
+}
+
+// LoadActorWithCurrentClothesBasicDataOnly (Returns user’s avatar appearance)
+async function loadActorWithCurrentClothes(requestBody, res) {
+  try {
+    const actorId = requestBody["soap:Envelope"]["soap:Body"][0]["LoadActorWithCurrentClothesBasicDataOnly"][0]["actorId"][0];
+
+    const userDoc = await db.collection("users").doc(actorId).get();
+    if (!userDoc.exists) return res.status(404).send("User not found");
+
+    const userData = userDoc.data();
+    const response = {
+      "soap:Envelope": {
+        "$": { "xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/" },
+        "soap:Body": {
+          "LoadActorWithCurrentClothesBasicDataOnlyResponse": {
+            "$": { "xmlns": "http://moviestarplanet.com/" },
+            "LoadActorWithCurrentClothesBasicDataOnlyResult": userData,
+          },
+        },
+      },
+    };
+
+    res.set("Content-Type", "text/xml");
+    res.send(buildXML(response));
+  } catch (error) {
+    console.error("Error in LoadActorWithCurrentClothesBasicDataOnly:", error);
+    res.status(500).send("Internal Server Error");
+  }
 }
 
 module.exports = router;
