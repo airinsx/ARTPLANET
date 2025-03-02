@@ -25,6 +25,9 @@ router.post("/Service", async (req, res) => {
       case "http://moviestarplanet.com/LoadActorDetails":
         return loadActorDetails(requestBody, res);
 
+      case "http://moviestarplanet.com/GetLatestServerException":
+        return getLatestServerException(res);
+
       default:
         res.status(400).send("Unknown SOAP Action");
     }
@@ -33,6 +36,24 @@ router.post("/Service", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+
+// Handle GetLatestServerException (returns empty response)
+function getLatestServerException(res) {
+  const response = {
+    "soap:Envelope": {
+      "$": { "xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/" },
+      "soap:Body": {
+        "GetLatestServerExceptionResponse": {
+          "$": { "xmlns": "http://moviestarplanet.com/" },
+          "GetLatestServerExceptionResult": ""
+        }
+      }
+    }
+  };
+
+  res.set("Content-Type", "text/xml");
+  res.send(buildXML(response));
+}
 
 // Load customization options (eyes, noses, etc.)
 function loadCustomizationOptions(res) {
@@ -89,10 +110,10 @@ function loadCustomizationOptions(res) {
 
 // Check if a username is already taken
 async function checkUsernameAvailability(requestBody, res) {
-  //const actorName = requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"][0]["actorName"][0];
+  const actorName = requestBody["soap:Envelope"]["soap:Body"][0]["IsActorNameUsed"][0]["actorName"][0];
 
-  //const usersRef = db.collection("users");
-  //const snapshot = await usersRef.where("Name", "==", actorName).get();
+  const usersRef = db.collection("users");
+  const snapshot = await usersRef.where("Name", "==", actorName).get();
 
   const response = {
     "soap:Envelope": {
@@ -100,8 +121,8 @@ async function checkUsernameAvailability(requestBody, res) {
       "soap:Body": {
         "IsActorNameUsedResponse": {
           "$": { "xmlns": "http://moviestarplanet.com/" },
-          //"IsActorNameUsedResult": snapshot.empty ? "false" : "true"
-          "IsActorNameUsedResult": "false"
+          "IsActorNameUsedResult": snapshot.empty ? "false" : "true"
+          //"IsActorNameUsedResult": "false"
         }
       }
     }
@@ -114,19 +135,27 @@ async function checkUsernameAvailability(requestBody, res) {
 // Create a new user
 async function createNewUser(requestBody, res) {
   const newUser = requestBody["soap:Envelope"]["soap:Body"][0]["CreateNewUser"][0]["actor"][0];
-  
+
   const userId = Date.now().toString(); // Generate a unique ID
   const userData = {
     ActorId: userId,
     Name: newUser["Name"][0],
-    Level: 1,
-    Money: 25000000,
+    Level: parseInt(newUser["Level"][0]) || 1,
+    Money: parseInt(newUser["Money"][0]) || 25000,
+    Fame: parseInt(newUser["Fame"][0]) || 0,
+    Fortune: parseInt(newUser["Fortune"][0]) || 0,
     SkinSWF: newUser["SkinSWF"][0],
     SkinColor: newUser["SkinColor"][0],
     EyeId: newUser["EyeId"][0],
     MouthId: newUser["MouthId"][0],
-    Password: newUser["Password"][0], // Store safely later
-    Created: new Date().toISOString()
+    Password: newUser["Password"][0], // 🚨 Store safely later!
+    Created: new Date().toISOString(),
+    LastLogin: null,
+    Email: null,
+    Moderator: parseInt(newUser["Moderator"][0]) || 0,
+    ProfileText: newUser["ProfileText"][0] || "",
+    Inventory: [],
+    Friends: []
   };
 
   await db.collection("users").doc(userId).set(userData);
@@ -146,6 +175,7 @@ async function createNewUser(requestBody, res) {
   res.set("Content-Type", "text/xml");
   res.send(buildXML(response));
 }
+
 
 // Load user details
 async function loadActorDetails(requestBody, res) {
